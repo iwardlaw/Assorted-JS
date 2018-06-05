@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * {
+    position: absolute;
+    box-sizing: border-box;
+  }
+  #container {
+    left: 30px;
+    top: 20px;
+    width: 200px;
+    height: 300px;
+    background-color: black;
+    border: 3px solid grey;
+    box-sizing: content-box;
+    overflow: hidden;
+  }
+  #box {
+    width: 25px;
+    height: 25px;
+    border: 2px solid #98bf21;
+    left: 30px;
+    top: 50px;
+  }
+  #svgArea {
+    width: 100%;
+    height: 100%;
+  }
+  #svgG {
+    fill: none;
+    stroke-linecap: round;
+  }
+  #line {
+    stroke: green;
+    stroke-width: 2;
+    stroke-dasharray: 6, 4;
+  }
+  .ctrl-btn {width: 30px; height: 30px;}
+  #ctrl-up {left: 320px; top: 20px;}
+  #ctrl-dn {left: 320px; top: 80px;}
+  #ctrl-lt {left: 290px; top: 50px;}
+  #ctrl-rt {left: 350px; top: 50px;}
+  .line-btn {width: 100px; height: 30px;}
+  #new-line-btn {left: 285px; top: 130px;}
+  #clr-line-btn {left: 285px; top: 170px;}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+var moveSpeed = 10;
+var updateSpeed = 20;
+var pulseDuration = 2000;
+var halfPulseDuration = pulseDuration / 2;
+var moveInterval = null;
+var btnStrength = {up: 1, down: 1, left: 1, right: 1};
+var cont, box, line;
+var boxTop, boxLeft, newTop, newLeft;
+var contWidth, contHeight;
+var boxWidth, boxHeight;
+var boxHalfWidth, boxHalfHeight;
+var moving = false;
+var drawingLine = false;
+var lineStart = {x: 0, y: 0};
+var pulseBrightenInterval = null;
+var pulseDarkenInterval = null;
+$(document).ready(function() {    
+  cont = $("#container");
+  box = $("#box");
+  line = $("#line");
+  contWidth = cont.width();
+  contHeight = cont.height();
+  boxWidth = box.width();
+  boxHeight = box.height();
+  boxHalfWidth = boxWidth / 2;
+  boxHalfHeight = boxHeight / 2;
+  newLeft = boxLeft = box.position().left;
+  newTop = boxTop = box.position().top;
+  
+  $("#ctrl-up").mousedown(function() {
+    if(!moving) {
+      moveInterval = setInterval(MoveUp, updateSpeed);
+      moving = true;
+    }
+  });
+  
+  $("#ctrl-dn").mousedown(function() {
+    if(!moving) {
+      moveInterval = setInterval(MoveDown, updateSpeed);
+      moving = true;
+    }
+  });
+  
+  $("#ctrl-lt").mousedown(function() {
+    if(!moving) {
+      moveInterval = setInterval(MoveLeft, updateSpeed);
+      moving = true;
+    }
+  });
+  
+  $("#ctrl-rt").mousedown(function() {
+    if(!moving) {
+      moveInterval = setInterval(MoveRight, updateSpeed);
+      moving = true;
+    }
+  });
+  
+  addEventListener("mouseup", function() {
+    clearInterval(moveInterval);
+    moving = false;
+  }, false);
+  
+  $("#new-line-btn").click(function() {
+    line.attr("x1", box.position().left + boxHalfWidth);
+    line.attr("y1", box.position().top + boxHalfHeight);
+    line.attr("x2", box.position().left + boxHalfWidth);
+    line.attr("y2", box.position().top + boxHalfHeight);
+    if(!drawingLine) {
+      drawingLine = true;
+      box.animate({opacity: 0.5}, {duration: halfPulseDuration, queue: false});
+      setTimeout(function() { box.animate({opacity: 1}, {duration: halfPulseDuration, queue: false}) }, halfPulseDuration);
+      pulseDarkenInterval = setInterval(function() { box.animate({opacity: 0.5}, {duration: halfPulseDuration, queue: false}) }, pulseDuration);
+      setTimeout(function() {
+        pulseBrightenInterval = setInterval(function() { box.animate({opacity: 1}, {duration: halfPulseDuration, queue: false}) }, pulseDuration)
+      }, halfPulseDuration);
+    }
+  });
+  
+  $("#clr-line-btn").click(function() {
+    line.attr("x1", 0);
+    line.attr("y1", 0);
+    line.attr("x2", 0);
+    line.attr("y2", 0);
+    drawingLine = false;
+    
+    clearInterval(pulseDarkenInterval);
+    clearInterval(pulseBrightenInterval);
+    box.animate({opacity: 1}, {duration: 0, queue: false});
+  });
+});
+
+function MoveUp() {
+  boxTop = box.position().top;
+  newTop = boxTop - (btnStrength.up * moveSpeed);
+  if(newTop < -boxHalfHeight) { newTop = -boxHalfHeight; }
+  AnimateTop();
+}
+
+function MoveDown() {
+  boxTop = box.position().top;
+  newTop = boxTop + (btnStrength.down * moveSpeed);
+  if(newTop > contHeight - boxHalfHeight) { newTop = contHeight - boxHalfHeight; }
+  AnimateTop();
+}
+
+function MoveLeft() {
+  boxLeft = box.position().left;
+  newLeft = boxLeft - (btnStrength.left * moveSpeed);
+  if(newLeft < -boxHalfWidth) { newLeft = -boxHalfWidth; }
+  AnimateLeft();
+}
+
+function MoveRight() {
+  boxLeft = box.position().left;
+  newLeft = boxLeft + (btnStrength.right * moveSpeed);
+  if(newLeft > contWidth - boxHalfWidth) { newLeft = contWidth - boxHalfWidth; }
+  AnimateLeft();
+}
+
+function AnimateTop()
+{
+  box.animate({top: boxTop}, {duration: 0, queue: false});
+  box.animate({top: newTop}, {duration: updateSpeed, queue: false});
+  if(drawingLine) { UpdateLine(); }
+}
+
+function AnimateLeft()
+{
+  box.animate({left: boxLeft}, {duration: 0, queue: false});
+  box.animate({left: newLeft}, {duration: updateSpeed, queue: false});
+  if(drawingLine) { UpdateLine(); }
+}
+
+function UpdateLine() {
+  line.stop();
+  line.animate(
+    {"@@nothing": 0},
+    {step: function() {
+      $(this).attr("x2", newLeft + boxHalfWidth).attr("y2", newTop + boxHalfHeight);
+    }, duration: updateSpeed}
+  );
+}
+</script>
+</head>
+<body>
+
+<div id="container">
+  <div id="box"></div>
+  <svg id="svgArea">
+    <g id="svgG">
+      <line id="line" x1="0" y1="0" x2="0" y2="0" />
+    </g>
+    Sorry. Your browser does not support inline SVG.
+  </svg>
+</div>
+<button id="ctrl-up" class="ctrl-btn">^</button>
+<button id="ctrl-dn" class="ctrl-btn">v</button>
+<button id="ctrl-lt" class="ctrl-btn">&lt;</button>
+<button id="ctrl-rt" class="ctrl-btn">&gt;</button>
+<button id="new-line-btn" class="line-btn">New Line</button>
+<button id="clr-line-btn" class="line-btn">Clear Line</button>
+
+</body>
+</html>
